@@ -4,7 +4,7 @@
   <strong>简体中文</strong> | <a href="README.md">English</a>
 </p>
 
-对 DSH 说一句「有没有插件能……」，它就会从全 GitHub 的 [`dsh-plugin` topic](https://github.com/topics/dsh-plugin) 里找出候选，解释差别，等你选好以后再安装和验证。
+对 DSH 说一句「有没有插件能……」。本仓库发布的是一个 DSH **Skill 插件**：它会从全 GitHub 的 [`dsh-plugin` topic](https://github.com/topics/dsh-plugin) 里找出候选，解释差别，等你选好以后再安装和验证。
 
 仓库属于个人还是组织并不重要。只要是公开仓库并带有 `dsh-plugin` topic，转移仓库后仍然能被发现。
 
@@ -12,7 +12,9 @@
 
 把本仓库链接发给 DSH，说一句「帮我装这个技能」。
 
-手动安装时，把 `skills/find-dsh-plugins/` 整个目录复制到 `$DSH_HOME/skills/`；只想给当前项目使用，则复制到 `<项目根>/.agents/skills/`。目录 watcher 会让它立即生效。
+本仓库是 **Skill 分发仓库**，而不是 Cordis profile bundle。因此它使用官方的一层 `<skill-name>/SKILL.md` 结构，不需要根目录 `package.json`、`dsh.bundle` 声明或 `cordis.patch.yml`。
+
+手动安装时，把 `skills/find-dsh-plugins/` 整个目录复制到 `$DSH_HOME/skills/find-dsh-plugins/`；只想给当前项目使用，则复制到 `<项目根>/.agents/skills/find-dsh-plugins/`。目录 watcher 会让它立即生效。
 
 ## 它会怎么做
 

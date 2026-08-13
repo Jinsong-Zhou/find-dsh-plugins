@@ -4,7 +4,7 @@
   <a href="README.zh-CN.md">简体中文</a> | <strong>English</strong>
 </p>
 
-Ask DSH, “is there a plugin for this?” It searches the GitHub [`dsh-plugin` topic](https://github.com/topics/dsh-plugin), explains the best matches, waits for your choice, then installs and verifies the selected plugin.
+Ask DSH, “is there a plugin for this?” This repository ships a DSH **Skill plugin** that searches the GitHub [`dsh-plugin` topic](https://github.com/topics/dsh-plugin), explains the best matches, waits for your choice, then installs and verifies the selected plugin.
 
 Repository ownership does not matter. Any public repository tagged `dsh-plugin` remains discoverable after a transfer between a personal account and an organization.
 
@@ -12,7 +12,9 @@ Repository ownership does not matter. Any public repository tagged `dsh-plugin` 
 
 Send the repository link to DSH and say, “Install this skill for me.”
 
-For a manual installation, copy the entire `skills/find-dsh-plugins/` directory to `$DSH_HOME/skills/`. To use it in one project only, copy it to `<project-root>/.agents/skills/`. The directory watcher loads it immediately.
+This repository is intentionally a **Skill distribution**, not a Cordis profile bundle. It therefore uses the official one-level `<skill-name>/SKILL.md` layout and does not need a root `package.json`, `dsh.bundle` declaration, or `cordis.patch.yml`.
+
+For a manual installation, copy the entire `skills/find-dsh-plugins/` directory to `$DSH_HOME/skills/find-dsh-plugins/`. To use it in one project only, copy it to `<project-root>/.agents/skills/find-dsh-plugins/`. The directory watcher loads it immediately.
 
 ## What it does
 
