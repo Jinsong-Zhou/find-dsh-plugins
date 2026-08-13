@@ -4,47 +4,43 @@
   <a href="README.zh-CN.md">简体中文</a> | <strong>English</strong>
 </p>
 
-A DSH Skill that finds plugins for your task across the entire GitHub
-[`dsh-plugin` topic](https://github.com/topics/dsh-plugin), and runs a
-[NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) security scan
-before installing anything.
+A DSH plugin that finds plugins for your task across the entire GitHub
+[`dsh-plugin` topic](https://github.com/topics/dsh-plugin), with a security
+scan before anything gets installed.
 
 ## Install
 
-1. Copy the skill directory into one DSH discovery root:
+Send this repository link to DSH and say "install this plugin for me".
 
-   ```bash
-   # for all projects
-   cp -r skills/safe-find-dsh-plugins "$DSH_HOME/skills/"
+To install manually, copy the whole `skills/safe-find-dsh-plugins/` directory
+into `$DSH_HOME/skills/`, or into `<project-root>/.agents/skills/` for one
+project only. Once it's in place it just works — no other configuration.
 
-   # or for one project only
-   cp -r skills/safe-find-dsh-plugins <project-root>/.agents/skills/
-   ```
+## What it does
 
-2. Install SkillSpector, which powers the pre-install security scan:
+Given your request, it first pulls every public repository under the topic
+(skipping archives and forks), ranks them against what you asked for, takes a
+close look at only the best few, works out how each one is meant to be
+installed, and hands you a shortlist of at most three candidates.
 
-   ```bash
-   uv tool install git+https://github.com/NVIDIA/skillspector.git
-   ```
+After you pick one, it doesn't install right away: it pins the candidate's
+exact commit, then runs a static security scan over that source — plugin code
+is never executed. A clean scan moves ahead; if risks turn up, every finding
+is laid out for you and the decision is yours; high-risk results, failed
+scans, or a missing scanner never install. What ends up in your environment is
+always the exact commit that was scanned — and this step is never skipped,
+even when you named the plugin yourself from the start.
 
-## How to use
-
-Describe what you need in a DSH session, for example:
-
-> Find me a DSH plugin that can control a browser.
-
-The Skill searches the topic, shows you a short ranked shortlist, and waits for
-your choice. Before installing the plugin you picked, it automatically scans
-the pinned source and walks you through the result — safe sources proceed,
-risky ones are flagged or blocked. Without SkillSpector installed, it refuses
-to install and tells you what to do.
+The scanner is a separate dependency. Before installing a plugin for you the
+first time, it checks whether the scanner is present and hands you the install
+command if not.
 
 ## Acknowledgements
 
-- [Nagi-ovo/dsh-find-plugins](https://github.com/Nagi-ovo/dsh-find-plugins) —
-  the upstream project this Skill is forked from.
-- [NVIDIA/SkillSpector](https://github.com/NVIDIA/SkillSpector) — the security
-  scanner behind the install gate.
+- Forked from [Nagi-ovo/dsh-find-plugins](https://github.com/Nagi-ovo/dsh-find-plugins).
+- Security scanning is powered by
+  [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector):
+  `uv tool install git+https://github.com/NVIDIA/skillspector.git`.
 
 ## License
 
