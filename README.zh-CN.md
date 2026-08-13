@@ -1,30 +1,98 @@
-# find-dsh-plugins
+# safe-find-dsh-plugins
 
 <p align="center">
   <strong>简体中文</strong> | <a href="README.md">English</a>
 </p>
 
-对 DSH 说一句「有没有插件能……」。本仓库发布的是一个 DSH **Skill 插件**：它会从全 GitHub 的 [`dsh-plugin` topic](https://github.com/topics/dsh-plugin) 里找出候选，解释差别，等你选好以后再安装和验证。
+`safe-find-dsh-plugins` 是一个 DSH Skill：它把用户的任务需求转换为一份短而可审查的插件候选清单。它会搜索 GitHub 上所有带有 [`dsh-plugin` topic](https://github.com/topics/dsh-plugin) 的公开仓库，按需求排序，核对候选是否兼容当前 DSH，并在安装之前强制执行安全检查。
 
-仓库属于个人还是组织并不重要。只要是公开仓库并带有 `dsh-plugin` topic，转移仓库后仍然能被发现。
+## 安全优先
 
-## 安装
+GitHub topic 只是发现信号，不代表官方背书或安全认证。安装任何候选仓库之前，本 Skill 都会使用 [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) 扫描锁定版本的源码。SkillSpector 不会执行被扫描插件；它进行静态安全分析，并可选地增加 LLM 语义审查。
 
-把本仓库链接发给 DSH，说一句「帮我装这个技能」。
+安装门禁按扫描器的机器可读建议执行：
 
-本仓库是 **Skill 分发仓库**，而不是 Cordis profile bundle。因此它使用官方的一层 `<skill-name>/SKILL.md` 结构，不需要根目录 `package.json`、`dsh.bundle` 声明或 `cordis.patch.yml`。
+| 建议 | 行为 |
+|---|---|
+| `SAFE` | 用户确认锁定版本后可以继续安装。 |
+| `CAUTION` | 展示报告，并要求用户明确接受风险。 |
+| `DO_NOT_INSTALL` | 阻止安装。 |
+| 扫描失败或扫描器不可用 | 失败关闭，不安装。 |
 
-手动安装时，把 `skills/find-dsh-plugins/` 整个目录复制到 `$DSH_HOME/skills/find-dsh-plugins/`；只想给当前项目使用，则复制到 `<项目根>/.agents/skills/find-dsh-plugins/`。目录 watcher 会让它立即生效。
+扫描报告只对特定源码版本和特定扫描器版本有效。Skill 会锁定通过审查的 commit，不会拿其他版本的报告当作当前版本的安全凭据。SkillSpector 是纵深防御工具，不是沙箱，也不保证插件绝对安全。
 
-## 它会怎么做
+## 安装本 Skill
 
-Skill 会把你的原始需求交给自带脚本，获取所有公开、未归档、非 fork 的 `dsh-plugin` 仓库，再按仓库名、描述和 topics 的覆盖度初排；更新时间和 stars 只作为弱排序信号。它只检查最匹配的少量候选，并从 README、`package.json` 和仓库文件判断应该按 bundle、Cordis 插件还是 skill 安装。涉及 lifecycle scripts 或可疑的额外写入时，它会停下来让你确认。
+仓库采用 DSH 官方的一层 Skill bundle 结构：
 
-也可以单独运行检索器：`node skills/find-dsh-plugins/scripts/search-topic.mjs --query '浏览器自动化 browser automation' --limit 5`。中文需求附上英文生态关键词通常更准。输出 JSON 包含总发现数、匹配数，以及每个候选的分数、覆盖率和命中词。
+```text
+skills/safe-find-dsh-plugins/
+├── SKILL.md
+├── references/
+└── scripts/
+```
 
-比如「想把数据和流程画出来」可以找到 [dsh-visualize](https://github.com/Nagi-ovo/dsh-visualize)；「想给 Web UI 加点 2005 年互联网味道」可能会找到 [dsh-ads](https://github.com/Nagi-ovo/dsh-ads)。检索命中纯属巧合。
+把完整目录复制到：
 
-[dsh-external/hub](https://github.com/dsh-external/hub) 在当前账号可访问时可以补充分类和安装信息，但 GitHub topic 才是主目录。灵感来自 vercel-labs/skills 的 find-skills。
+```text
+$DSH_HOME/skills/safe-find-dsh-plugins/
+```
+
+或者仅用于当前项目：
+
+```text
+<project-root>/.agents/skills/safe-find-dsh-plugins/
+```
+
+它是 Skill 分发仓库，不是 Cordis profile bundle，因此不需要根目录 `package.json`、`dsh.bundle` 或 `cordis.patch.yml`。
+
+## 前置依赖：NVIDIA SkillSpector
+
+在要求本 Skill 安装第三方插件之前，先通过 `uv` 安装 SkillSpector：
+
+```bash
+uv tool install git+https://github.com/NVIDIA/skillspector.git
+```
+
+仓库内置的门禁脚本会检查 CLI、运行静态扫描，并规范化 JSON 建议：
+
+```bash
+node skills/safe-find-dsh-plugins/scripts/security-review.mjs \
+  --target https://github.com/owner/plugin \
+  --expected-commit <完整-commit-sha> \
+  --report ./skillspector-report.json
+```
+
+脚本会克隆仓库、检出锁定的 commit、扫描该检出内容,并输出规范化的 JSON 决策。退出码:`0` 放行(`SAFE`)、`1` 需确认(`CAUTION`)、`2` 阻止(`DO_NOT_INSTALL`)、`3` 失败关闭(扫描器缺失、扫描出错或 commit 不匹配)。
+
+仅当配置的 SkillSpector 服务商获准接收插件文件内容时才使用 `--llm`。静态模式在可以访问 OSV.dev 时仍会发送依赖名称和版本，以查询已知漏洞。具体数据外发行为以 SkillSpector 的 trust model 为准。
+
+## 发现命令
+
+搜索脚本也可以单独使用：
+
+```bash
+node skills/safe-find-dsh-plugins/scripts/search-topic.mjs \
+  --query "浏览器控制 browser automation" --limit 5
+```
+
+输出包括发现总数、排序后的仓库、关键词覆盖率和命中词。Skill 随后会读取最相关候选的仓库文件、核对当前 DSH 兼容性、让用户选择、锁定 commit、运行安全门禁，最后才按照确认过的安装方式操作。
+
+## 验证
+
+```bash
+node --test skills/safe-find-dsh-plugins/scripts/*.test.mjs
+```
+
+## 致谢
+
+本项目基于以下两个仓库的工作：
+
+- [Nagi-ovo/dsh-find-plugins](https://github.com/Nagi-ovo/dsh-find-plugins) ——
+  本 Skill fork 自该上游项目，topic 发现流程、排序脚本和安装参考文档均由其奠定。
+- [NVIDIA/SkillSpector](https://github.com/NVIDIA/SkillSpector) ——
+  安装门禁背后的安全扫描器，其建议契约（`SAFE` / `CAUTION` / `DO_NOT_INSTALL`）
+  和 trust model 塑造了本 Skill 失败关闭的审查步骤。
 
 ## 许可证
 

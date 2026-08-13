@@ -125,7 +125,7 @@ export async function fetchRepositories({ token = resolveToken(), fetchImpl = fe
     url.searchParams.set('page', String(page))
     const headers = {
       accept: 'application/vnd.github+json',
-      'user-agent': 'find-dsh-plugins',
+      'user-agent': 'safe-find-dsh-plugins',
       'x-github-api-version': '2022-11-28',
     }
     if (token !== '') headers.authorization = `Bearer ${token}`
@@ -186,7 +186,7 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
-    process.stderr.write(`find-dsh-plugins: ${error instanceof Error ? error.message : String(error)}\n`)
+    process.stderr.write(`safe-find-dsh-plugins: ${error instanceof Error ? error.message : String(error)}\n`)
     process.exitCode = 1
   })
 }

@@ -1,11 +1,12 @@
 ---
-name: find-dsh-plugins
+name: safe-find-dsh-plugins
 description: >
   Use when a user wants to discover or install a DeepSeek Harness plugin, asks
   whether a plugin exists for a task, or wants to explore the DSH ecosystem.
   Searches public repositories in GitHub's dsh-plugin topic across all owners,
-  ranks candidates against the requirement, asks the user to choose, determines
-  the installation type from repository declarations, and verifies activation.
+  ranks candidates against the requirement, asks the user to choose, runs a
+  SkillSpector security review against the pinned source, determines the
+  installation type from repository declarations, and verifies activation.
 ---
 
 # Find and install DSH plugins
@@ -86,13 +87,64 @@ the user wants to create a new plugin instead.
 
 Stop and wait for the user to select a candidate. If the user already named a
 specific plugin, verify its current repository and installation type in Step 2,
-then continue directly to installation.
+then continue to the security review. Never skip the review because the user
+named the plugin themselves.
 
-## Step 4: Install
+## Step 4: Security review gate
+
+A GitHub topic is a discovery signal, not a trust mark. Before touching the
+environment, scan the selected source with NVIDIA SkillSpector through the
+bundled gate script.
+
+Pin the exact revision first. Resolve the candidate's current head commit
+(for example `gh api repos/<owner>/<repo>/commits/<default-branch> --jq .sha`)
+or use the commit the user asked for. The scan is evidence for that one commit
+only.
+
+```sh
+node <skill-directory>/scripts/security-review.mjs \
+  --target <repository-url-or-local-path> \
+  --expected-commit <full-commit-sha> \
+  --report <temporary-directory>/skillspector-report.json
+```
+
+The script verifies the scanner is installed, checks out the pinned commit in a
+temporary directory, runs a static SkillSpector scan, and prints a normalized
+JSON decision. Add `--llm` only when the configured SkillSpector provider is
+approved to receive plugin file contents; if LLM analysis is requested but does
+not run, the script fails closed.
+
+Act on the exit code and the `gate` field:
+
+- `0` / `allow` (`SAFE`): show the user the pinned commit and risk score, then
+  proceed to installation after they confirm.
+- `1` / `confirm` (`CAUTION`): present every finding from the report with file
+  and line. Continue only if the user explicitly accepts the risk.
+- `2` / `block` (`DO_NOT_INSTALL`): do not install. Summarize the findings and
+  return to Step 2 to offer alternatives.
+- `3` / `error`: fail closed. Report the reason (scanner missing, scan failure,
+  commit mismatch) and do not install until it is resolved.
+
+If SkillSpector is not installed, show the user the prerequisite from the
+repository README (`uv tool install
+git+https://github.com/NVIDIA/skillspector.git`) and stop; never install a
+plugin without a completed scan.
+
+Completion check: the gate returned `allow`, or returned `confirm` and the user
+explicitly accepted the documented risk. Record the scanned commit; it is the
+only revision installation may use.
+
+## Step 5: Install
 
 Open [references/install-methods.md](references/install-methods.md) and follow
 the section for the verified installation type. When multiple methods exist,
 use the priority documented at the top of that file.
+
+Install exactly the commit that passed the security review. For Git specs, pin
+it explicitly (`github:<owner>/<repo>#<scanned-commit>`); for skill directories,
+check out the scanned commit before copying files. If any ref, path, or commit
+must change, return to Step 4 and rescan — a report for another revision is not
+approval for this one.
 
 Before changing the environment, read the repository's installation section and
 all `package.json` lifecycle scripts. Git and npm dependencies may execute
@@ -103,7 +155,7 @@ configuration, show the exact behavior and ask for confirmation first.
 Completion check: configuration and dependencies are installed, and all install
 commands complete without errors.
 
-## Step 5: Verify activation
+## Step 6: Verify activation
 
 Long-running surfaces such as Web watch patch changes and may reload the plugin.
 One-shot surfaces pick it up at their next start. Ask the user to confirm that the
